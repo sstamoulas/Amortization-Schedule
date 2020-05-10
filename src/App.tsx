@@ -14,7 +14,7 @@ type AppState = {
   principle: number;
   interestRate: string;
   monthlyTaxes: number;
-  numberOfPayments: number;
+  years: number;
   extraPayments: string[];
 }
 
@@ -30,14 +30,14 @@ class App extends Component<{}, AppState> {
     let principleStorage: string|null;
     let interestRate: string;
     let interestRateStorage: string|null;
-    let numberOfPayments: number;
-    let numberOfPaymentsStorage: string|null;
+    let years: number;
+    let yearsStorage: string|null;
 
     paymentStorage = localStorage.getItem('payments');
     dateStorage = localStorage.getItem('startingDate');
     principleStorage = localStorage.getItem('principle');
     interestRateStorage = localStorage.getItem('interestRate');
-    numberOfPaymentsStorage = localStorage.getItem('numberOfPayments');
+    yearsStorage = localStorage.getItem('years');
 
     if(paymentStorage) {
       pastPayments = JSON.parse(paymentStorage);
@@ -67,11 +67,11 @@ class App extends Component<{}, AppState> {
       interestRate = '0';
     }
 
-    if(numberOfPaymentsStorage) {
-      numberOfPayments = parseFloat(numberOfPaymentsStorage);
+    if(yearsStorage) {
+      years = parseFloat(yearsStorage);
     }
     else {
-      numberOfPayments = 0;
+      years = 0;
     }
 
     this.state = {
@@ -79,7 +79,7 @@ class App extends Component<{}, AppState> {
       principle: principle,
       interestRate: interestRate,
       monthlyTaxes: 292.04,
-      numberOfPayments: numberOfPayments,
+      years: years,
       extraPayments: pastPayments,
     };
   }
@@ -90,13 +90,15 @@ class App extends Component<{}, AppState> {
   }
 
   render() {
-    let { startingDate, principle, interestRate, monthlyTaxes, numberOfPayments, extraPayments }: AppState = this.state;
+    let { startingDate, principle, interestRate, monthlyTaxes, years, extraPayments }: AppState = this.state;
 
     const monthlyInterestRate: number = (parseFloat(interestRate) ?? 0) / 12;
 
+    const numberOfPayments: number = years * 12;
     const monthlyPayment: number = (principle * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) / (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1));
     const monthlyInterest: number = principle * monthlyInterestRate;
     const monthlyPrinciple: number = monthlyPayment - monthlyInterest;
+    
     let payments: Payment[] = [{
       prevDate: startingDate,
       prevAmount: principle,
@@ -149,13 +151,13 @@ class App extends Component<{}, AppState> {
 
     payments[payments.length - 1].prevDate = lastPayment;
 
-    const updateNumberOfPayments = (numberOfPayments: string): void => {
-      let parsedNumberOfPayments = isNaN(parseFloat(numberOfPayments)) ? 0 : parseFloat(numberOfPayments);
+    const updateYears = (years: string): void => {
+      let parsedYears = isNaN(parseFloat(years)) ? 0 : parseFloat(years);
       this.setState({
-        numberOfPayments: parsedNumberOfPayments,
+        years: parsedYears,
       })
 
-      localStorage.setItem('numberOfPayments', parsedNumberOfPayments.toString());
+      localStorage.setItem('years', parsedYears.toString());
     }
 
     const updateInterestRate = (interestRate: string): void => {
@@ -212,12 +214,12 @@ class App extends Component<{}, AppState> {
           <div className='table-responsive text-center'>
             <div className="d-flex justify-content-center">
               <div className="w-50">
-                <label htmlFor='numberOfPayments' className="align-elements">Number of Payments:</label>
+                <label htmlFor='years' className="align-elements">Years:</label>
                 <input 
                   type='number' 
-                  id='numberOfPayments'
-                  value={numberOfPayments <= 0 ? '' : numberOfPayments} 
-                  onChange={(e) => updateNumberOfPayments(e.target.value)} 
+                  id='years'
+                  value={years <= 0 ? '' : years} 
+                  onChange={(e) => updateYears(e.target.value)} 
                 />
               </div>
               <div className="w-50">
