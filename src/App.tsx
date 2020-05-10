@@ -15,6 +15,7 @@ type AppState = {
   interestRate: string;
   monthlyTaxes: number;
   years: number;
+  currentMortgage: number;
   extraPayments: string[];
 }
 
@@ -32,12 +33,15 @@ class App extends Component<{}, AppState> {
     let interestRateStorage: string|null;
     let years: number;
     let yearsStorage: string|null;
+    let currentMortgage: number;
+    let currentMortgageStorage: string|null;
 
     paymentStorage = localStorage.getItem('payments');
     dateStorage = localStorage.getItem('startingDate');
     principleStorage = localStorage.getItem('principle');
     interestRateStorage = localStorage.getItem('interestRate');
     yearsStorage = localStorage.getItem('years');
+    currentMortgageStorage = localStorage.getItem('currentMortgage');
 
     if(paymentStorage) {
       pastPayments = JSON.parse(paymentStorage);
@@ -50,7 +54,7 @@ class App extends Component<{}, AppState> {
       startDate = new Date(dateStorage);
     }
     else {
-      startDate = new Date(`${(new Date()).getMonth() + 1}, ${(new Date()).getDate()}, ${(new Date()).getFullYear()}`);
+      startDate = new Date(`${(new Date()).getMonth()}, ${(new Date()).getDate()}, ${(new Date()).getFullYear()}`);
     }
 
     if(principleStorage) {
@@ -74,30 +78,48 @@ class App extends Component<{}, AppState> {
       years = 0;
     }
 
+    if(currentMortgageStorage) {
+      currentMortgage = parseFloat(currentMortgageStorage);
+    }
+    else {
+      currentMortgage = 0;
+    }
+
     this.state = {
       startingDate: startDate,
-      principle: principle,
+      principle: principle, //181,360.95
       interestRate: interestRate,
       monthlyTaxes: 292.04,
-      years: years,
+      years: years, //26
+      currentMortgage: currentMortgage,
       extraPayments: pastPayments,
     };
   }
 
   thousandsSeparator = (number: number): string => {
-
     return (number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
   render() {
-    let { startingDate, principle, interestRate, monthlyTaxes, years, extraPayments }: AppState = this.state;
+    let { startingDate, principle, interestRate, monthlyTaxes, years, currentMortgage, extraPayments }: AppState = this.state;
 
     const monthlyInterestRate: number = (parseFloat(interestRate) ?? 0) / 12;
+    let numberOfPayments: number = 0;
+    let monthlyPayment: number = 0;
+    let monthlyInterest: number = 0;
+    let monthlyPrinciple: number = 0;
 
-    const numberOfPayments: number = years * 12;
-    const monthlyPayment: number = (principle * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) / (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1));
-    const monthlyInterest: number = principle * monthlyInterestRate;
-    const monthlyPrinciple: number = monthlyPayment - monthlyInterest;
+    if(currentMortgage === 0) {
+      numberOfPayments = years * 12;
+      monthlyPayment = (principle * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) / (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1));
+      monthlyInterest = principle * monthlyInterestRate;
+      monthlyPrinciple = monthlyPayment - monthlyInterest;
+    }
+    else {
+      monthlyPayment = currentMortgage;
+      monthlyInterest = principle * monthlyInterestRate;
+      monthlyPrinciple = currentMortgage - monthlyInterest;
+    }
     
     let payments: Payment[] = [{
       prevDate: startingDate,
@@ -107,16 +129,18 @@ class App extends Component<{}, AppState> {
       prevExtra: extraPayments[0].length ? extraPayments[0] : 0,
     }];
 
-    for(let i: number = 1; i < numberOfPayments; i++) {
-      let { prevDate, prevAmount, prevInterest, prevPrinciple, prevExtra }: Payment = payments[i - 1];
-      let newAmount: number = prevAmount - prevPrinciple;
+    let i: number = 0;
+    let newAmount: number = payments[i].prevAmount - payments[i].prevPrinciple;
+    while(newAmount > 0) {
+      let { prevDate, prevAmount, prevInterest, prevPrinciple, prevExtra }: Payment = payments[i];
+      newAmount = prevAmount - prevPrinciple;
       let extra;
 
       if(prevExtra.length) {
         newAmount -= parseFloat(prevExtra);
       }
 
-      if(extraPayments[i].length) {
+      if(extraPayments[i] && extraPayments[i].length) {
         extra = extraPayments[i];
       }
       else {
@@ -127,7 +151,7 @@ class App extends Component<{}, AppState> {
         prevDate.setMonth(0);
         prevDate.setFullYear(prevDate.getFullYear() + 1);
       }
-      else {
+      else if(i > 0) {
         prevDate.setMonth(prevDate.getMonth() + 1);
       }
 
@@ -138,6 +162,8 @@ class App extends Component<{}, AppState> {
         prevPrinciple: ((monthlyPayment - (newAmount * monthlyInterestRate))),
         prevExtra: extra,
       });
+
+      i++;
     }
 
     let lastPayment = payments[payments.length - 1].prevDate;
@@ -158,6 +184,15 @@ class App extends Component<{}, AppState> {
       })
 
       localStorage.setItem('years', parsedYears.toString());
+    }
+
+    const updateMortgage = (mortgage: string): void => {
+      let parsedMortgage = isNaN(parseFloat(mortgage)) ? 0 : parseFloat(mortgage);
+      this.setState({
+        currentMortgage: parsedMortgage,
+      })
+
+      localStorage.setItem('currentMortgage', parsedMortgage.toString());
     }
 
     const updateInterestRate = (interestRate: string): void => {
@@ -187,7 +222,6 @@ class App extends Component<{}, AppState> {
     }
 
     const updateExtra = (extra: string, i: number): void => {
-
       let newPayments = extraPayments.map((payment, index) => {
         if(i === index) {
           return extra;
@@ -204,7 +238,7 @@ class App extends Component<{}, AppState> {
     }
 
     let date = startingDate.getDate();
-    let month = startingDate.getMonth() + 1;
+    let month = startingDate.getMonth();
     let year = startingDate.getFullYear();
 
     return (
@@ -213,13 +247,45 @@ class App extends Component<{}, AppState> {
           <h1 className='text-center my-5'>Amortization Schedule</h1>
           <div className='table-responsive text-center'>
             <div className="d-flex justify-content-center">
-              <div className="w-50">
+            {
+              (years > 0 || currentMortgage === 0) &&
+              <div className="w-50 d-flex justify-content-center">
                 <label htmlFor='years' className="align-elements">Years:</label>
                 <input 
                   type='number' 
                   id='years'
                   value={years <= 0 ? '' : years} 
                   onChange={(e) => updateYears(e.target.value)} 
+                />
+              </div>
+            }
+            {
+              currentMortgage === 0 && years === 0 &&
+              <div className="w-50 d-flex justify-content-center">
+                <label>-------------------- OR --------------------</label>
+              </div>
+            }
+            {
+              (currentMortgage > 0 || years === 0) &&
+              <div className="w-50 d-flex justify-content-center">
+                <label htmlFor='mortgage' className="align-elements">Mortgage:</label>
+                <input
+                  type='number'
+                  id='mortgage'
+                  value={currentMortgage <= 0 ? '' : currentMortgage}
+                  onChange={(e) => updateMortgage(e.target.value)}
+                />
+              </div>
+            }
+            </div>
+            <div className="d-flex justify-content-center">
+              <div className="w-50">
+                <label htmlFor='principle' className="align-elements">Remaining Loan Amount:</label>
+                <input 
+                  type='number' 
+                  id='principle'
+                  value={principle <= 0 ? '' : principle} 
+                  onChange={(e) => updatePrinciple(e.target.value)} 
                 />
               </div>
               <div className="w-50">
@@ -232,23 +298,12 @@ class App extends Component<{}, AppState> {
                   onChange={(e) => updateInterestRate(e.target.value)} 
                 />
               </div>
-            </div>
-            <div className="d-flex justify-content-center">
-              <div className="w-50">
-                <label htmlFor='principle' className="align-elements">Principle:</label>
-                <input 
-                  type='number' 
-                  id='principle'
-                  value={principle <= 0 ? '' : principle} 
-                  onChange={(e) => updatePrinciple(e.target.value)} 
-                />
-              </div>
               <div className="w-50">
                 <label htmlFor='startingDate' className="align-elements">Starting Date:</label>
                 <input 
                   type='date' 
                   id='startingDate'
-                  value={`${year}-${month < 10 ? `0${month}` : month}-${date < 10 ? `0${date}` : date}`} 
+                  value={`${year}-${(month + 1) < 10 ? `0${month + 1}` : month + 1}-${date < 10 ? `0${date}` : date}`} 
                   onChange={(e) => updateDate(e.target.value)} 
                 />
               </div>
@@ -267,7 +322,7 @@ class App extends Component<{}, AppState> {
                 {
                   payments.filter((payment) => payment.prevAmount >= 0).map((payment, index) => (
                     <tr key={index}>
-                      <td>{`${payment.prevDate.getMonth() + 1}/${payment.prevDate.getDate()}/${payment.prevDate.getFullYear()}`}</td>
+                      <td>{`${payment.prevDate.getMonth()}/${payment.prevDate.getDate()}/${payment.prevDate.getFullYear()}`}</td>
                       <td>${this.thousandsSeparator(parseFloat((payment.prevAmount).toFixed(2)))}</td>
                       <td>${this.thousandsSeparator(parseFloat((payment.prevInterest).toFixed(2)))}</td>
                       <td>${this.thousandsSeparator(parseFloat((payment.prevPrinciple).toFixed(2)))}</td>
