@@ -10,7 +10,6 @@ interface Payment {
 }
 
 type AppState = {
-  startingDate: Date;
   principle: number;
   interestRate: string;
   monthlyTaxes: number;
@@ -86,7 +85,6 @@ class App extends Component<{}, AppState> {
     }
 
     this.state = {
-      startingDate: new Date(),
       principle: principle, //181,360.95
       interestRate: interestRate, //.0385
       monthlyTaxes: taxes, //292.04
@@ -101,7 +99,8 @@ class App extends Component<{}, AppState> {
   }
 
   render() {
-    let { startingDate, principle, interestRate, monthlyTaxes, years, currentMortgage, fixedAmount }: AppState = this.state;
+    let { principle, interestRate, monthlyTaxes, years, currentMortgage, fixedAmount }: AppState = this.state;
+    let startingDate: Date = new Date();
 
     const monthlyInterestRate: number = (parseFloat(interestRate) ?? 0) / 12;
     let mortgage: number = currentMortgage - monthlyTaxes;
@@ -166,7 +165,7 @@ class App extends Component<{}, AppState> {
     }
     else {
       let newExtraPayment: number = fixedAmount;
-      
+
       payments = [{
         paymentDate: startingDate,
         totalAmount: principle,
@@ -177,13 +176,16 @@ class App extends Component<{}, AppState> {
 
       while(payments[payments.length - 1].totalAmount > 0) {
         let { paymentDate, totalAmount }: Payment = payments[payments.length - 1];
-        
-        if(paymentDate.getMonth() > 12) {
-          paymentDate.setMonth(0);
-          paymentDate.setFullYear(paymentDate.getFullYear() + 1);
+        let newMonth: number = paymentDate.getMonth();
+        let newDate: number = paymentDate.getDate();
+        let newYear: number = paymentDate.getFullYear();
+
+        if(newMonth >= 11) {
+          newMonth = 0;
+          newYear += 1;
         }
         else {
-          paymentDate.setMonth(paymentDate.getMonth() + 1);
+          newMonth += 1;
         }
 
         newInterest = (totalAmount * monthlyInterestRate);
@@ -197,7 +199,7 @@ class App extends Component<{}, AppState> {
         totalInterest += newInterest;
 
         payments.push({
-          paymentDate: new Date(`${paymentDate.getMonth() + 1}, ${paymentDate.getDate()}, ${paymentDate.getFullYear()}`),
+          paymentDate: new Date(`${newMonth + 1}, ${newDate}, ${newYear}`),
           totalAmount: newTotalAmount, 
           interest: newInterest,
           principle: newPrinciple,
