@@ -106,105 +106,107 @@ class App extends Component<{}, AppState> {
     let mortgage: number = currentMortgage - monthlyTaxes;
     let newInterest: number = (principle * monthlyInterestRate);
     let newPrinciple: number = (mortgage - newInterest);
-    let payments: Payment[];
+    let payments: Payment[] = [];
     let totalInterest: number = newInterest;
 
-    if(years > 0) {
-      let numberOfPayments: number = years * 12;
-      let monthlyPayment: number = principle / numberOfPayments;
-      let newExtraPayment: number = (monthlyPayment - newPrinciple);
+    if(principle && interestRate && monthlyTaxes && currentMortgage && (fixedAmount || years)) {
+      if(years > 0) {
+        let numberOfPayments: number = years * 12;
+        let monthlyPayment: number = principle / numberOfPayments;
+        let newExtraPayment: number = (monthlyPayment - newPrinciple);
 
-      payments = [{
-        paymentDate: startingDate,
-        totalAmount: principle,
-        interest: newInterest,
-        principle: newPrinciple,
-        extra: newExtraPayment < 0 ? 0 : newExtraPayment,
-      }];
-
-      for(let i: number = 0; i < numberOfPayments; i++) {
-        let { paymentDate }: Payment = payments[i];
-
-        if(paymentDate.getMonth() > 12) {
-          paymentDate.setMonth(0);
-          paymentDate.setFullYear(paymentDate.getFullYear() + 1);
-        }
-        else if(i > 0) {
-          paymentDate.setMonth(paymentDate.getMonth() + 1);
-        }
-
-        newInterest = (payments[i].totalAmount * monthlyInterestRate);
-        newPrinciple  = (mortgage - newInterest);
-        newExtraPayment = (monthlyPayment - newPrinciple);
-        let newTotalAmount: number = newExtraPayment < 0 ? 
-          (payments[i].totalAmount - newPrinciple)
-        :
-          (payments[i].totalAmount - newPrinciple - newExtraPayment);
-
-        totalInterest += newInterest;
-
-        payments.push({
-          paymentDate: new Date(`${paymentDate.getMonth() + 1}, ${paymentDate.getDate()}, ${paymentDate.getFullYear()}`),
-          totalAmount: newTotalAmount, 
+        payments = [{
+          paymentDate: startingDate,
+          totalAmount: principle,
           interest: newInterest,
           principle: newPrinciple,
           extra: newExtraPayment < 0 ? 0 : newExtraPayment,
-        });
-      }
+        }];
 
-      let lastPayment = payments[payments.length - 1].paymentDate;
-      if(lastPayment.getMonth() >= 12) {
-        lastPayment.setMonth(0);
-        lastPayment.setFullYear(lastPayment.getFullYear() + 1);
-      }
-      else {
-        lastPayment.setMonth(lastPayment.getMonth() + 1);
-      }
+        for(let i: number = 0; i < numberOfPayments; i++) {
+          let { paymentDate }: Payment = payments[i];
 
-      payments[payments.length - 1].paymentDate = lastPayment;
-    }
-    else {
-      let newExtraPayment: number = fixedAmount;
+          if(paymentDate.getMonth() > 12) {
+            paymentDate.setMonth(0);
+            paymentDate.setFullYear(paymentDate.getFullYear() + 1);
+          }
+          else if(i > 0) {
+            paymentDate.setMonth(paymentDate.getMonth() + 1);
+          }
 
-      payments = [{
-        paymentDate: startingDate,
-        totalAmount: principle,
-        interest: newInterest,
-        principle: newPrinciple,
-        extra: newExtraPayment < 0 ? 0 : newExtraPayment,
-      }];
+          newInterest = (payments[i].totalAmount * monthlyInterestRate);
+          newPrinciple  = (mortgage - newInterest);
+          newExtraPayment = (monthlyPayment - newPrinciple);
+          let newTotalAmount: number = newExtraPayment < 0 ? 
+            (payments[i].totalAmount - newPrinciple)
+          :
+            (payments[i].totalAmount - newPrinciple - newExtraPayment);
 
-      while(payments[payments.length - 1].totalAmount > 0) {
-        let { paymentDate, totalAmount }: Payment = payments[payments.length - 1];
-        let newMonth: number = paymentDate.getMonth();
-        let newDate: number = paymentDate.getDate();
-        let newYear: number = paymentDate.getFullYear();
+          totalInterest += newInterest;
 
-        if(newMonth >= 11) {
-          newMonth = 0;
-          newYear += 1;
+          payments.push({
+            paymentDate: new Date(`${paymentDate.getMonth() + 1}, ${paymentDate.getDate()}, ${paymentDate.getFullYear()}`),
+            totalAmount: newTotalAmount, 
+            interest: newInterest,
+            principle: newPrinciple,
+            extra: newExtraPayment < 0 ? 0 : newExtraPayment,
+          });
+        }
+
+        let lastPayment = payments[payments.length - 1].paymentDate;
+        if(lastPayment.getMonth() >= 12) {
+          lastPayment.setMonth(0);
+          lastPayment.setFullYear(lastPayment.getFullYear() + 1);
         }
         else {
-          newMonth += 1;
+          lastPayment.setMonth(lastPayment.getMonth() + 1);
         }
 
-        newInterest = (totalAmount * monthlyInterestRate);
-        newPrinciple  = (mortgage - newInterest);
-        newExtraPayment = fixedAmount;
-        let newTotalAmount: number = newExtraPayment < 0 ? 
-          (totalAmount - newPrinciple)
-        :
-          (totalAmount - newPrinciple - newExtraPayment);
+        payments[payments.length - 1].paymentDate = lastPayment;
+      }
+      else {
+        let newExtraPayment: number = fixedAmount;
 
-        totalInterest += newInterest;
-
-        payments.push({
-          paymentDate: new Date(`${newMonth + 1}, ${newDate}, ${newYear}`),
-          totalAmount: newTotalAmount, 
+        payments = [{
+          paymentDate: startingDate,
+          totalAmount: principle,
           interest: newInterest,
           principle: newPrinciple,
           extra: newExtraPayment < 0 ? 0 : newExtraPayment,
-        });
+        }];
+
+        while(payments[payments.length - 1].totalAmount > 0) {
+          let { paymentDate, totalAmount }: Payment = payments[payments.length - 1];
+          let newMonth: number = paymentDate.getMonth();
+          let newDate: number = paymentDate.getDate();
+          let newYear: number = paymentDate.getFullYear();
+
+          if(newMonth >= 11) {
+            newMonth = 0;
+            newYear += 1;
+          }
+          else {
+            newMonth += 1;
+          }
+
+          newInterest = (totalAmount * monthlyInterestRate);
+          newPrinciple  = (mortgage - newInterest);
+          newExtraPayment = fixedAmount;
+          let newTotalAmount: number = newExtraPayment < 0 ? 
+            (totalAmount - newPrinciple)
+          :
+            (totalAmount - newPrinciple - newExtraPayment);
+
+          totalInterest += newInterest;
+
+          payments.push({
+            paymentDate: new Date(`${newMonth + 1}, ${newDate}, ${newYear}`),
+            totalAmount: newTotalAmount, 
+            interest: newInterest,
+            principle: newPrinciple,
+            extra: newExtraPayment < 0 ? 0 : newExtraPayment,
+          });
+        }
       }
     }
 
@@ -330,7 +332,7 @@ class App extends Component<{}, AppState> {
                 />
               </div>
             </div>
-            <div>Total Interest Paid: ${this.thousandsSeparator(parseFloat((totalInterest).toFixed(2)))}</div>
+            <div>Total Interest Paid: ${isNaN(totalInterest) ? "N/A" : this.thousandsSeparator(parseFloat((totalInterest).toFixed(2)))}</div>
             <table className='table table-striped table-hover table-sm mb-0'>
               <thead>
                 <tr>
