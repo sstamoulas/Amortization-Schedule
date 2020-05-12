@@ -109,7 +109,7 @@ class App extends Component<{}, AppState> {
     let payments: Payment[] = [];
     let totalInterest: number = newInterest;
 
-    if(principle && interestRate && monthlyTaxes && currentMortgage && (fixedAmount || years)) {
+    if(principle && interestRate && monthlyTaxes && currentMortgage && (fixedAmount || years) && newPrinciple > 0) {
       if(years > 0) {
         let numberOfPayments: number = years * 12;
         let monthlyPayment: number = principle / numberOfPayments;
@@ -117,7 +117,7 @@ class App extends Component<{}, AppState> {
 
         payments = [{
           paymentDate: startingDate,
-          totalAmount: principle,
+          totalAmount: newExtraPayment > 0 ? principle - newPrinciple - newExtraPayment : principle - newPrinciple,
           interest: newInterest,
           principle: newPrinciple,
           extra: newExtraPayment < 0 ? 0 : newExtraPayment,
@@ -130,7 +130,7 @@ class App extends Component<{}, AppState> {
             paymentDate.setMonth(0);
             paymentDate.setFullYear(paymentDate.getFullYear() + 1);
           }
-          else if(i > 0) {
+          else {
             paymentDate.setMonth(paymentDate.getMonth() + 1);
           }
 
@@ -169,7 +169,7 @@ class App extends Component<{}, AppState> {
 
         payments = [{
           paymentDate: startingDate,
-          totalAmount: principle,
+          totalAmount: newExtraPayment > 0 ? principle - newPrinciple - newExtraPayment : principle - newPrinciple,
           interest: newInterest,
           principle: newPrinciple,
           extra: newExtraPayment < 0 ? 0 : newExtraPayment,
@@ -273,6 +273,7 @@ class App extends Component<{}, AppState> {
         <div className='container'>
           <h1 className='text-center my-5'>Amortization Schedule</h1>
           <div className='table-responsive text-center'>
+            <div style={{color: 'red', display: newPrinciple > 0 ? 'none' : ''}}>Your mortgage produces a negative principle of -${(newPrinciple * -1).toFixed(2)}. You need to change something so it will be positive.</div>
             <div className="d-flex justify-content-center">
               <div className="w-50">
                 <label htmlFor='years' className="align-elements">Years:</label>
